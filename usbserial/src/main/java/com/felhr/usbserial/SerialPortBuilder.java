@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 
 import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
@@ -152,7 +153,13 @@ public class SerialPortBuilder {
     }
 
     private PendingUsbPermission createUsbPermission(Context context, UsbDeviceStatus usbDeviceStatus){
-        PendingIntent mPendingIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
+
+        Intent i = new Intent(ACTION_USB_PERMISSION);
+        i.setPackage(context.getPackageName());
+        
+        int flags = (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) ? PendingIntent.FLAG_MUTABLE : 0;
+
+        PendingIntent mPendingIntent = PendingIntent.getBroadcast(context, 0, i, flags);
         PendingUsbPermission pendingUsbPermission = new PendingUsbPermission();
         pendingUsbPermission.pendingIntent = mPendingIntent;
         pendingUsbPermission.usbDeviceStatus = usbDeviceStatus;
@@ -176,7 +183,13 @@ public class SerialPortBuilder {
         if(!broadcastRegistered) {
             IntentFilter filter = new IntentFilter();
             filter.addAction(ACTION_USB_PERMISSION);
-            context.registerReceiver(usbReceiver, filter);
+            // can be done with ContextCompat.registerReceiver(getBaseContext(), usbReceiver,filter, ContextCompat.RECEIVER_EXPORTED);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(usbReceiver, filter, null, null, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                context.registerReceiver(usbReceiver, filter);
+            }
             broadcastRegistered = true;
         }
     }
